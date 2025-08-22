@@ -7,6 +7,8 @@ const {
   getMonthlyExpenses,
 } = require("./expenseService");
 const { registerUser } = require("./userService");
+const express = require("express");
+const app = express();
 
 // Telegram Bot setup
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -101,4 +103,13 @@ bot.onText(/\/monthly/, async (msg) => {
     console.error("❌ Error fetching monthly expenses:", error.message);
     bot.sendMessage(chatId, "❌ Could not fetch monthly expenses.");
   }
+});
+
+app.get("/", (req, res) => {
+  res.send("Bot is running ✅");
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
