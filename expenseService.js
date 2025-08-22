@@ -1,4 +1,4 @@
-const { supabase } = require("./supabaseClient");
+const supabase = require("./supabaseClient");
 const { registerUser } = require("./userService");
 
 const categoryMap = {
@@ -19,7 +19,9 @@ function classifyCategory(input) {
   return categoryMap[lower] || "Miscellaneous";
 }
 
-async function addExpense(telegramId, username, amount, category) {
+// Add expense for a user
+async function addExpense(telegramId, username, amount, categoryInput) {
+  // Ensure user exists
   await registerUser(telegramId, username);
 
   const { data: user, error: userError } = await supabase
@@ -30,11 +32,14 @@ async function addExpense(telegramId, username, amount, category) {
 
   if (userError || !user) throw new Error("User not found");
 
+  const finalCategory = classifyCategory(categoryInput);
+
   const { error: insertError } = await supabase.from("expenses").insert([
     {
       user_id: user.id,
-      amount,
-      category,
+      amount: parseFloat(amount),
+      category: categoryInput,
+      main_category: finalCategory,
     },
   ]);
 
@@ -42,10 +47,8 @@ async function addExpense(telegramId, username, amount, category) {
   return true;
 }
 
-// Get all today's expenses
+// Fetch today's expenses for a user
 async function getTodayExpenses(telegramId) {
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
   const { data: user, error: userError } = await supabase
     .from("users")
     .select("id")
@@ -54,27 +57,22 @@ async function getTodayExpenses(telegramId) {
 
   if (userError || !user) throw new Error("User not found");
 
+  const today = new Date().toISOString().split("T")[0];
+
   const { data, error } = await supabase
     .from("expenses")
-    .select("amount, category, created_at")
+    .select("amount, category, main_category, created_at")
     .eq("user_id", user.id)
-    .gte("created_at", `${today}T00:00:00`)
-    .lte("created_at", `${today}T23:59:59`)
+    .gte("created_at", `${today} 00:00:00`)
+    .lte("created_at", `${today} 23:59:59`)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
   return data;
 }
-// Get this month's expenses
+
+// Fetch monthly expenses for a user
 async function getMonthlyExpenses(telegramId) {
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .split("T")[0];
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    .toISOString()
-    .split("T")[0];
-
   const { data: user, error: userError } = await supabase
     .from("users")
     .select("id")
@@ -83,16 +81,25 @@ async function getMonthlyExpenses(telegramId) {
 
   if (userError || !user) throw new Error("User not found");
 
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+
   const { data, error } = await supabase
     .from("expenses")
-    .select("amount, category, created_at")
+    .select("amount, category, main_category, created_at")
     .eq("user_id", user.id)
-    .gte("created_at", `${firstDay}T00:00:00`)
-    .lte("created_at", `${lastDay}T23:59:59`)
+    .gte("created_at", `${startOfMonth} 00:00:00`)
+    .lte("created_at", `${now.toISOString().split("T")[0]} 23:59:59`)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
   return data;
 }
 
-module.exports = { addExpense, getTodayExpenses, getMonthlyExpenses };
+module.exports = {
+  addExpense,
+  getTodayExpenses,
+  getMonthlyExpenses,
+};
