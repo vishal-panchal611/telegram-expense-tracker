@@ -1,83 +1,127 @@
-const supabase = require("./supabaseClient");
+// userService.js
+import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
 
-async function registerUser(userId, username) {
+dotenv.config();
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
+
+// Register a new user
+export async function registerUser(chatId, username) {
   try {
-    if (!supabase) {
-      console.error(
-        "❌ Supabase client is undefined. Check supabaseClient.js export."
-      );
-      throw new Error("Supabase client not initialized");
-    }
+    const { data: existingUser, error: fetchError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("telegram_id", chatId)
+      .maybeSingle();
 
-    console.log("🔍 Registering user:", { userId, username });
+    if (fetchError) throw fetchError;
+
+    if (existingUser) {
+      return existingUser.id; // already registered
+    }
 
     const { data, error } = await supabase
       .from("users")
-      .insert([{ telegram_id: userId, username }]);
+      .insert([{ telegram_id: chatId, username }])
+      .select("id")
+      .single();
 
-    if (error) {
-      console.error("❌ Supabase insert error:", error);
-      throw error;
-    }
+    if (error) throw error;
 
-    console.log("✅ User registered:", data);
-    return data;
+    return data.id;
   } catch (err) {
-    console.error("❌ registerUser failed:", err.message);
+    console.error("registerUser error:", err.message);
     throw err;
   }
 }
 
-async function getUserExpenses(userId, date) {
+// Add an expense
+export async function addExpense(chatId, amount, category) {
   try {
-    if (!supabase) {
-      console.error("❌ Supabase client is undefined.");
-      throw new Error("Supabase client not initialized");
-    }
+    // get user
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("telegram_id", chatId)
+      .single();
+
+    if (userError) throw userError;
+
+    // insert expense
+    const { error } = await supabase.from("expenses").insert([
+      {
+        user_id: user.id,
+        amount,
+        category,
+        main_category: category, // we can refine later
+      },
+    ]);
+
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("addExpense error:", err.message);
+    throw err;
+  }
+}
+
+// Get today’s expenses
+export async function getTodayExpenses(chatId) {
+  try {
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("telegram_id", chatId)
+      .single();
+
+    if (userError) throw userError;
 
     const { data, error } = await supabase
       .from("expenses")
-      .select("*")
-      .eq("telegram_id", userId)
-      .gte("date", date + " 00:00:00")
-      .lte("date", date + " 23:59:59");
+      .select("amount, category, created_at")
+      .eq("user_id", user.id)
+      .gte("created_at", new Date().toISOString().slice(0, 10)) // today
+      .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("❌ Supabase select error:", error);
-      throw error;
-    }
+    if (error) throw error;
 
     return data;
   } catch (err) {
-    console.error("❌ getUserExpenses failed:", err.message);
+    console.error("getTodayExpenses error:", err.message);
     throw err;
   }
 }
 
-async function getMonthlyExpenses(userId, monthStart, monthEnd) {
+// Get monthly expenses
+export async function getMonthlyExpenses(chatId) {
   try {
-    if (!supabase) {
-      console.error("❌ Supabase client is undefined.");
-      throw new Error("Supabase client not initialized");
-    }
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("telegram_id", chatId)
+      .single();
+
+    if (userError) throw userError;
+
+    const firstDayOfMonth = new Date();
+    firstDayOfMonth.setDate(1);
 
     const { data, error } = await supabase
       .from("expenses")
-      .select("*")
-      .eq("telegram_id", userId)
-      .gte("date", monthStart)
-      .lte("date", monthEnd);
+      .select("amount, category, created_at")
+      .eq("user_id", user.id)
+      .gte("created_at", firstDayOfMonth.toISOString())
+      .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("❌ Supabase monthly select error:", error);
-      throw error;
-    }
+    if (error) throw error;
 
     return data;
   } catch (err) {
-    console.error("❌ getMonthlyExpenses failed:", err.message);
+    console.error("getMonthlyExpenses error:", err.message);
     throw err;
   }
 }
-
-module.exports = { registerUser, getUserExpenses, getMonthlyExpenses };
