@@ -1,23 +1,44 @@
-require("dotenv").config();
-const TelegramBot = require("node-telegram-bot-api");
-
-const {
+import express from "express";
+import bodyParser from "body-parser";
+import TelegramBot from "node-telegram-bot-api";
+import dotenv from "dotenv";
+import {
+  registerUser,
   addExpense,
   getTodayExpenses,
   getMonthlyExpenses,
-} = require("./expenseService");
-const { registerUser } = require("./userService");
-const express = require("express");
+} from "./userService.js";
+
+dotenv.config();
+
 const app = express();
+const port = process.env.PORT || 3000;
 
-// Telegram Bot setup
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const bot = new TelegramBot(token, { polling: true });
+if (!token) {
+  console.error("❌ TELEGRAM_BOT_TOKEN is missing in environment variables!");
+  process.exit(1);
+}
 
-// /start command
+const bot = new TelegramBot(token);
+
+// Middleware
+app.use(bodyParser.json());
+
+// ✅ Set Telegram webhook (Render provides PUBLIC_URL)
+const webhookUrl = `${process.env.PUBLIC_URL}/bot${token}`;
+bot.setWebHook(webhookUrl);
+
+// ✅ Endpoint to receive updates from Telegram
+app.post(`/bot${token}`, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+
+// 🟢 /start command
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
-  const username = msg.chat.username || msg.chat.first_name;
+  const username = msg.from.username || "Unknown";
 
   try {
     await registerUser(chatId, username);
@@ -25,91 +46,86 @@ bot.onText(/\/start/, async (msg) => {
       chatId,
       `👋 Hi ${username}!\n\n✅ You are registered.\n\nSend expenses like:\n200 coffee`
     );
-  } catch (error) {
-    console.error("❌ Registration failed:", error.message);
-    bot.sendMessage(chatId, "❌ Registration failed. Try again later.");
+  } catch (err) {
+    console.error("❌ Registration error:", err);
+    bot.sendMessage(chatId, "❌ Registration failed. Please try again.");
   }
 });
 
-// Handle expense messages (e.g., "200 coffee")
+// 🟢 Handle expenses
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
-  const text = msg.text;
+  if (msg.text.startsWith("/")) return; // Ignore commands here
 
-  if (!isNaN(text.split(" ")[0]) && text.split(" ").length > 1) {
-    const amount = text.split(" ")[0];
-    const category = text.split(" ").slice(1).join(" ");
-    const username = msg.chat.username || msg.chat.first_name;
+  const parts = msg.text.trim().split(" ");
+  if (parts.length < 2 || isNaN(parts[0])) {
+    return bot.sendMessage(chatId, "❌ Invalid format. Use: `200 coffee`");
+  }
 
-    try {
-      await addExpense(chatId, username, amount, category);
-      bot.sendMessage(chatId, `✅ Expense added: ${amount} for ${category}`);
-    } catch (error) {
-      console.error("❌ Failed to add expense:", error.message);
-      bot.sendMessage(chatId, "❌ Something went wrong. Please try again.");
-    }
+  const amount = parseFloat(parts[0]);
+  const category = parts.slice(1).join(" ");
+
+  try {
+    await addExpense(chatId, amount, category);
+    bot.sendMessage(chatId, `✅ Added expense: ₹${amount} for *${category}*`, {
+      parse_mode: "Markdown",
+    });
+  } catch (err) {
+    console.error("❌ Expense error:", err);
+    bot.sendMessage(chatId, "❌ Something went wrong. Please try again.");
   }
 });
 
-// /myexpenses → today’s expenses
+// 🟢 /myexpenses (today)
 bot.onText(/\/myexpenses/, async (msg) => {
   const chatId = msg.chat.id;
-
   try {
     const expenses = await getTodayExpenses(chatId);
     if (expenses.length === 0) {
-      bot.sendMessage(chatId, "📭 No expenses recorded today.");
-      return;
+      return bot.sendMessage(chatId, "📭 No expenses found for today.");
     }
 
-    let response = "📅 *Today's Expenses:*\n\n";
+    let text = "📝 *Today's Expenses:*\n\n";
     let total = 0;
-
-    expenses.forEach((exp) => {
-      response += `💰 ${exp.amount} - ${exp.category} (${exp.main_category})\n`;
-      total += parseFloat(exp.amount);
+    expenses.forEach((e) => {
+      text += `- ₹${e.amount} on ${e.category}\n`;
+      total += parseFloat(e.amount);
     });
-
-    response += `\n*Total*: ${total}`;
-    bot.sendMessage(chatId, response, { parse_mode: "Markdown" });
-  } catch (error) {
-    console.error("❌ Error fetching expenses:", error.message);
-    bot.sendMessage(chatId, "❌ Could not fetch expenses.");
+    text += `\n💰 *Total:* ₹${total}`;
+    bot.sendMessage(chatId, text, { parse_mode: "Markdown" });
+  } catch (err) {
+    console.error("❌ Error fetching today's expenses:", err);
+    bot.sendMessage(chatId, "❌ Could not fetch today's expenses.");
   }
 });
 
-// /monthly → this month's expenses
+// 🟢 /monthly (current month)
 bot.onText(/\/monthly/, async (msg) => {
   const chatId = msg.chat.id;
-
   try {
     const expenses = await getMonthlyExpenses(chatId);
     if (expenses.length === 0) {
-      bot.sendMessage(chatId, "📭 No expenses recorded this month.");
-      return;
+      return bot.sendMessage(chatId, "📭 No expenses found this month.");
     }
 
-    let response = "📅 *This Month's Expenses:*\n\n";
+    let text = "📅 *This Month's Expenses:*\n\n";
     let total = 0;
-
-    expenses.forEach((exp) => {
-      response += `💰 ${exp.amount} - ${exp.category} (${exp.main_category})\n`;
-      total += parseFloat(exp.amount);
+    expenses.forEach((e) => {
+      text += `- ₹${e.amount} on ${e.category} (${new Date(
+        e.created_at
+      ).toLocaleDateString()})\n`;
+      total += parseFloat(e.amount);
     });
-
-    response += `\n*Total*: ${total}`;
-    bot.sendMessage(chatId, response, { parse_mode: "Markdown" });
-  } catch (error) {
-    console.error("❌ Error fetching monthly expenses:", error.message);
+    text += `\n💰 *Total:* ₹${total}`;
+    bot.sendMessage(chatId, text, { parse_mode: "Markdown" });
+  } catch (err) {
+    console.error("❌ Error fetching monthly expenses:", err);
     bot.sendMessage(chatId, "❌ Could not fetch monthly expenses.");
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("Bot is running ✅");
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Start server
+app.listen(port, () => {
+  console.log(`🚀 Server running on port ${port}`);
+  console.log(`🌍 Webhook set at: ${webhookUrl}`);
 });
