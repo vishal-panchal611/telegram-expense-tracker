@@ -1,0 +1,38 @@
+Expense bot project 
+
+expensebotproject@gmail.com
+pwd 
+Expense2025r@
+
+supabase db pwd - LI8LBTIHo60MFYj3
+
+1.IMP - move to database approach from sheets approach
+1.Find how to create user based sheets instead of new worksheet everytime 
+2.how to limit access to telegram bot 
+3.Day's summary and month's summary
+4.Option to view instant summary of day or month
+5.How to send user info from website to telegram bot for hi(start) message 
+6.make scheduler on render to stop at 12midnight and start at 6am
+7. check supabase free tier backup and restore feasibility
+
+
+
+Prompt written for moving google sheet to database (not used though)
+The project of telegram expense bot is working perfectly fine, but now it is time to take it to the next level
+Things we need to start 1st
+- we need to make the data logging into the postgres which is hosted on render or some online site like supabase and not in the existing excel sheet 
+This is need so that we can perform actions on the data stored in the database and not in the sheets 
+Help with this move from storing the data into sheet to a postgres database on render or on supbase whichever is easy to use, free and easily scalable to use 
+
+
+
+Prompt used 
+The project of telegram expense bot is working perfectly fine, but now it is time to take it to the next level
+
+Things we need to do
+1. instead of storing data into the google sheet we now need to store the data into the database postgres on render or by using supabase
+2. we need to make a signup or a page where user can come and register to use this app, this is to seperate the user data 
+3. the user seperation is need because we need to make a cron/scheduler which send the daily expense summary at 11pm to the user on their telegram, we also need to send monthly expense on the last day of month with money spend and catergory
+4. we need to make command that user can use on telegram so see the daily/monthly summary instantly 
+
+so we can go one by one and make this project a Saas model which we can use to make out of it , let's start 
