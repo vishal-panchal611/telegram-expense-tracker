@@ -30,19 +30,20 @@ const bot = new TelegramBot(token);
 // Middleware
 app.use(bodyParser.json());
 
-// ✅ Set Telegram webhook (Render provides PUBLIC_URL)
-// const webhookUrl = `${process.env.PUBLIC_URL}/bot${token}`;
-// bot.setWebHook(webhookUrl);
-// const baseUrl =
-//   process.env.WEBHOOK_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`;
-// await bot.setWebHook(`${baseUrl}/bot${process.env.BOT_TOKEN}`);
-
+// ✅ Webhook setup URL
 const baseUrl =
   process.env.WEBHOOK_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`;
-const webhookUrl = `${baseUrl}bot${process.env.BOT_TOKEN}`;
+const webhookUrl = `${baseUrl}/bot${process.env.BOT_TOKEN}`;
 
-await bot.setWebHook(webhookUrl);
-console.log(`🌍 Webhook set at: ${webhookUrl}`);
+// ✅ Setup webhook inside a function (no top-level await)
+async function setupWebhook() {
+  try {
+    await bot.setWebHook(webhookUrl);
+    console.log(`🌍 Webhook set at: ${webhookUrl}`);
+  } catch (err) {
+    console.error("❌ Error setting webhook:", err);
+  }
+}
 
 // ✅ Endpoint to receive updates from Telegram
 app.post(`/bot${token}`, (req, res) => {
@@ -139,8 +140,8 @@ bot.onText(/\/monthly/, async (msg) => {
   }
 });
 
-// Start server
+// Start server and setup webhook
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
-  console.log(`🌍 Webhook set at: ${webhookUrl}`);
+  setupWebhook(); // ✅ Call webhook after server is live
 });
