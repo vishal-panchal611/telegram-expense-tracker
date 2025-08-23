@@ -83,7 +83,7 @@ bot.on("message", async (msg) => {
 });
 
 // 🟢 /myexpenses (today)
-bot.onText(/\/myexpenses/, async (msg) => {
+bot.onText(/\/daily/, async (msg) => {
   const chatId = msg.chat.id;
   try {
     const expenses = await getTodayExpenses(chatId);
