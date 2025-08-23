@@ -31,9 +31,18 @@ const bot = new TelegramBot(token);
 app.use(bodyParser.json());
 
 // ✅ Webhook setup URL
+// const baseUrl =
+//   process.env.WEBHOOK_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`;
+// const webhookUrl = `${baseUrl}/bot${process.env.BOT_TOKEN}`;
+
 const baseUrl =
   process.env.WEBHOOK_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`;
-const webhookUrl = `${baseUrl}/bot${process.env.BOT_TOKEN}`;
+
+// ✅ Use TELEGRAM_BOT_TOKEN (already stored in `token`)
+const webhookUrl = `${baseUrl}/bot${token}`;
+
+await bot.setWebHook(webhookUrl);
+console.log(`🌍 Webhook set at: ${webhookUrl}`);
 
 // ✅ Setup webhook inside a function (no top-level await)
 async function setupWebhook() {
