@@ -33,9 +33,16 @@ app.use(bodyParser.json());
 // ✅ Set Telegram webhook (Render provides PUBLIC_URL)
 // const webhookUrl = `${process.env.PUBLIC_URL}/bot${token}`;
 // bot.setWebHook(webhookUrl);
+// const baseUrl =
+//   process.env.WEBHOOK_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`;
+// await bot.setWebHook(`${baseUrl}/bot${process.env.BOT_TOKEN}`);
+
 const baseUrl =
   process.env.WEBHOOK_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`;
-await bot.setWebHook(`${baseUrl}/bot${process.env.BOT_TOKEN}`);
+const webhookUrl = `${baseUrl}bot${process.env.BOT_TOKEN}`;
+
+await bot.setWebHook(webhookUrl);
+console.log(`🌍 Webhook set at: ${webhookUrl}`);
 
 // ✅ Endpoint to receive updates from Telegram
 app.post(`/bot${token}`, (req, res) => {
