@@ -10,6 +10,11 @@ import {
 } from "./userService.js";
 
 dotenv.config();
+console.log("ENV WEBHOOK_URL:", process.env.WEBHOOK_URL);
+console.log(
+  "ENV RENDER_EXTERNAL_HOSTNAME:",
+  process.env.RENDER_EXTERNAL_HOSTNAME
+);
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -26,8 +31,11 @@ const bot = new TelegramBot(token);
 app.use(bodyParser.json());
 
 // ✅ Set Telegram webhook (Render provides PUBLIC_URL)
-const webhookUrl = `${process.env.PUBLIC_URL}/bot${token}`;
-bot.setWebHook(webhookUrl);
+// const webhookUrl = `${process.env.PUBLIC_URL}/bot${token}`;
+// bot.setWebHook(webhookUrl);
+const baseUrl =
+  process.env.WEBHOOK_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`;
+await bot.setWebHook(`${baseUrl}/bot${process.env.BOT_TOKEN}`);
 
 // ✅ Endpoint to receive updates from Telegram
 app.post(`/bot${token}`, (req, res) => {
