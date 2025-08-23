@@ -44,7 +44,7 @@ app.post(`/bot${token}`, (req, res) => {
 // 🟢 /start command
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
-  const username = msg.from.username || "Unknown";
+  const username = msg.from.first_name || msg.from.username || "Unknown";
 
   try {
     await registerUser(chatId, username);
