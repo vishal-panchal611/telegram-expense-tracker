@@ -186,11 +186,38 @@ app.post(`/bot${token}`, (req, res) => {
 });
 
 // 🟢 /start command
+// bot.onText(/\/start/, async (msg) => {
+//   const chatId = msg.chat.id;
+//   const username = msg.from.first_name || msg.from.username || "Unknown";
+
+//   try {
+//     await registerUser(chatId, username);
+//     bot.sendMessage(
+//       chatId,
+//       `👋 Hi ${username}!\n\n✅ You are registered.\n\nSend expenses like:\n200 coffee`
+//     );
+//   } catch (err) {
+//     console.error("❌ Registration error:", err);
+//     bot.sendMessage(chatId, "❌ Registration failed. Please try again.");
+//   }
+// });
+// 🟢 /start command
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
   const username = msg.from.first_name || msg.from.username || "Unknown";
 
   try {
+    const userExists = await isUserRegistered(chatId);
+
+    if (userExists) {
+      // ✅ If the user is already registered, send this message
+      return bot.sendMessage(
+        chatId,
+        `👋 Welcome back, ${username}! You're already registered. Feel free to start tracking your expenses.`
+      );
+    }
+
+    // ✅ If the user is new, proceed with registration
     await registerUser(chatId, username);
     bot.sendMessage(
       chatId,
