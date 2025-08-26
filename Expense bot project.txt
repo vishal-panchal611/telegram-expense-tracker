@@ -36,3 +36,23 @@ Things we need to do
 4. we need to make command that user can use on telegram so see the daily/monthly summary instantly 
 
 so we can go one by one and make this project a Saas model which we can use to make out of it , let's start 
+
+
+
+
+23rd August 
+The entire project is working live on render 
+Things done 
+-added db storage and user segregation using users table and expenses table 
+-user can only see the expense of them and not of others
+-/start to register on telegram bot 
+- 200 coffee, 100 cab can be sent in message to store the address
+-/daily command sent to bot to see the details of expenses done that day
+-/monthly command sent to bot to see the details of all expenses in that month
+
+Things to do 
+-avoid duplicate user registration on /start
+-add more categories and section(see llm usage here)
+-add cron jobs to send daily expense at 11:59pm and monthly cron to send at last day of month at 11:59 (After that day's daily expense cron)
+
+-

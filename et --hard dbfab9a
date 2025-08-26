@@ -1,0 +1,23 @@
+* [33m4638f6d[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Added changes in all files
+* [33m5d1aa77[m Added changes in all files
+* [33mb7a5ef5[m Added fixes for issue of not registering and no expense added
+* [33m5122c2a[m Added changes to check registered/new user
+* [33mdbfab9a[m Changed /myexpense to /daily as bot command
+* [33m6ad0713[m Added changes for storing telegram username into db
+* [33m50ca7fb[m Added changes for index.js file
+* [33m2b0f6c8[m Added changes for bot token variable
+* [33me71ca77[m Added changes for package.json and index.js file
+* [33m8b4c3a5[m Added changes for webhookUrl variable
+* [33mf4dfc45[m Added logs and different way of using webhook url in index.js
+* [33m10bc7a3[m Added fixes in userService.js
+* [33m75efe76[m Added ports in index.js
+* [33ma3d98b1[m Added ports in index.js
+* [33mb12f720[m Added updates in userService, expenseService and Index file
+* [33mf3083ce[m Added logs for debugging
+* [33m7406ff5[m Added supabaseClient.js file
+* [33m9a24daf[m Added changes for dependencies
+* [33mf7b1e24[m Added changes to save in supabase(DB) and added montly and daily expense command for telegram
+* [33m335a4fe[m Add changes for credentials used on render
+* [33md01c2fc[m Add dependencies for Render deployment
+* [33m9ffbe3f[m Added changes for webhook and polling
+* [33m106402e[m Initial commit - Telegram expense tracker
