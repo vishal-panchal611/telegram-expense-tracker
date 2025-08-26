@@ -128,7 +128,8 @@
 
 // FOR ZIP.zip/FOR ZIP/userService.js
 
-import supabase from "./supabaseClient.js";
+// import supabase from "./supabaseClient.js";
+import { supabase } from "./supabaseClient.js";
 
 /**
  * Registers a new user in the database.
