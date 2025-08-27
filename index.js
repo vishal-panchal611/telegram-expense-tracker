@@ -171,9 +171,22 @@ app.listen(port, async () => {
       timezone: "Asia/Kolkata",
     });
 
-    cron.schedule("59 23 L * *", runMonthlySummary, {
-      timezone: "Asia/Kolkata",
-    });
+    cron.schedule(
+      "59 23 * * *",
+      async () => {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        // If tomorrow's date = 1, today is the last day of the month
+        if (tomorrow.getDate() === 1) {
+          await runMonthlySummary();
+        }
+      },
+      {
+        timezone: "Asia/Kolkata",
+      }
+    );
 
     console.log("🗓️ Cron jobs scheduled successfully.");
   } catch (err) {
