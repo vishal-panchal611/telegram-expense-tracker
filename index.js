@@ -1,13 +1,18 @@
+// FOR ZIP.zip/FOR ZIP/index.js
+
 import express from "express";
 import bodyParser from "body-parser";
 import TelegramBot from "node-telegram-bot-api";
 import dotenv from "dotenv";
+import cron from "node-cron";
 import {
   registerUser,
   addExpense,
   getTodayExpenses,
   getMonthlyExpenses,
   isUserRegistered,
+  getAllUsers,
+  formatSummary,
 } from "./userService.js";
 
 dotenv.config();
@@ -89,7 +94,7 @@ bot.on("message", async (msg) => {
   }
 
   const amount = parseFloat(parts[0]);
-  const item = parts.slice(1).join(" ").toLowerCase(); // ✅ Convert input to lowercase
+  const item = parts.slice(1).join(" ").toLowerCase();
 
   try {
     await addExpense(chatId, amount, item);
@@ -102,58 +107,78 @@ bot.on("message", async (msg) => {
   }
 });
 
+// ✅ Updated to use the new formatSummary
 bot.onText(/\/daily/, async (msg) => {
   const chatId = msg.chat.id;
   try {
     const expenses = await getTodayExpenses(chatId);
-    if (expenses.length === 0) {
-      return bot.sendMessage(chatId, "📭 No expenses found for today.");
-    }
-
-    let text = "📝 *Today's Expenses:*\n\n";
-    let total = 0;
-    expenses.forEach((e) => {
-      text += `- ₹${e.amount} on ${e.category}\n`;
-      total += parseFloat(e.amount);
-    });
-    text += `\n💰 *Total:* ₹${total}`;
-    bot.sendMessage(chatId, text, { parse_mode: "Markdown" });
+    const summaryText = formatSummary(expenses, "Today's");
+    bot.sendMessage(chatId, summaryText, { parse_mode: "Markdown" });
   } catch (err) {
-    console.error("❌ Error fetching today's expenses:", err);
-    bot.sendMessage(chatId, "❌ Could not fetch today's expenses.");
+    console.error("❌ Error fetching daily expenses:", err);
+    bot.sendMessage(chatId, "❌ Could not fetch daily expenses.");
   }
 });
 
+// ✅ Updated to use the new formatSummary with the isMonthly flag
 bot.onText(/\/monthly/, async (msg) => {
   const chatId = msg.chat.id;
   try {
     const expenses = await getMonthlyExpenses(chatId);
-    if (expenses.length === 0) {
-      return bot.sendMessage(chatId, "📭 No expenses found this month.");
-    }
-
-    let text = "📅 *This Month's Expenses:*\n\n";
-    let total = 0;
-    expenses.forEach((e) => {
-      text += `- ₹${e.amount} on ${e.category} (${new Date(
-        e.created_at
-      ).toLocaleDateString()})\n`;
-      total += parseFloat(e.amount);
-    });
-    text += `\n💰 *Total:* ₹${total}`;
-    bot.sendMessage(chatId, text, { parse_mode: "Markdown" });
+    const summaryText = formatSummary(expenses, "This Month's", true);
+    bot.sendMessage(chatId, summaryText, { parse_mode: "Markdown" });
   } catch (err) {
     console.error("❌ Error fetching monthly expenses:", err);
     bot.sendMessage(chatId, "❌ Could not fetch monthly expenses.");
   }
 });
 
+const runDailySummary = async () => {
+  console.log("Running daily summary cron job...");
+  try {
+    const users = await getAllUsers();
+    for (const chatId of users) {
+      const expenses = await getTodayExpenses(chatId);
+      const summary = formatSummary(expenses, "Today's");
+      await bot.sendMessage(chatId, summary, { parse_mode: "Markdown" });
+    }
+    console.log("Daily summary job finished.");
+  } catch (err) {
+    console.error("❌ Daily summary cron job failed:", err);
+  }
+};
+
+const runMonthlySummary = async () => {
+  console.log("Running monthly summary cron job...");
+  try {
+    const users = await getAllUsers();
+    for (const chatId of users) {
+      const expenses = await getMonthlyExpenses(chatId);
+      const summary = formatSummary(expenses, "This Month's", true);
+      await bot.sendMessage(chatId, summary, { parse_mode: "Markdown" });
+    }
+    console.log("Monthly summary job finished.");
+  } catch (err) {
+    console.error("❌ Monthly summary cron job failed:", err);
+  }
+};
+
 app.listen(port, async () => {
   console.log(`🚀 Server running on port ${port}`);
   try {
     await bot.setWebHook(webhookUrl);
     console.log(`🌍 Webhook set at: ${webhookUrl}`);
+
+    cron.schedule("59 23 * * *", runDailySummary, {
+      timezone: "Asia/Kolkata",
+    });
+
+    cron.schedule("59 23 L * *", runMonthlySummary, {
+      timezone: "Asia/Kolkata",
+    });
+
+    console.log("🗓️ Cron jobs scheduled successfully.");
   } catch (err) {
-    console.error("❌ Failed to set webhook:", err);
+    console.error("❌ Failed to set webhook or schedule jobs:", err);
   }
 });

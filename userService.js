@@ -1,3 +1,5 @@
+// FOR ZIP.zip/FOR ZIP/userService.js
+
 import { supabase } from "./supabaseClient.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -47,12 +49,12 @@ export async function isUserRegistered(telegramId) {
 }
 
 async function getOrInferCategory(item) {
-  const lowerCaseItem = item.toLowerCase(); // ✅ Convert to lowercase
+  const lowerCaseItem = item.toLowerCase();
 
   const { data, error } = await supabase
     .from("categories")
     .select("category")
-    .eq("item", lowerCaseItem) // ✅ Use lowercase for the query
+    .eq("item", lowerCaseItem)
     .maybeSingle();
 
   if (error && error.code !== "PGRST116") {
@@ -75,7 +77,7 @@ async function getOrInferCategory(item) {
 
     const { data: newCategory, error: insertError } = await supabase
       .from("categories")
-      .insert([{ item: lowerCaseItem, category: inferredCategory }]) // ✅ Use lowercase for insertion
+      .insert([{ item: lowerCaseItem, category: inferredCategory }])
       .select();
 
     if (insertError) {
@@ -180,4 +182,63 @@ export async function getMonthlyExpenses(telegramId) {
     console.error("getMonthlyExpenses error:", err.message);
     throw err;
   }
+}
+
+export async function getAllUsers() {
+  const { data, error } = await supabase.from("users").select("telegram_id");
+  if (error) throw error;
+  return data.map((user) => user.telegram_id);
+}
+
+// ✅ New formatSummary function to match the requested report style
+export function formatSummary(expenses, period, isMonthly = false) {
+  if (expenses.length === 0) {
+    return `📭 No expenses found for ${period}.`;
+  }
+
+  const categorySummary = {};
+  let total = 0;
+  const expenseCount = expenses.length;
+  const now = new Date();
+  const currentDay = now.getDate();
+  const daysInMonth = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    0
+  ).getDate();
+
+  expenses.forEach((e) => {
+    const amount = parseFloat(e.amount);
+    total += amount;
+
+    if (!categorySummary[e.category]) {
+      categorySummary[e.category] = { total: 0, count: 0 };
+    }
+    categorySummary[e.category].total += amount;
+    categorySummary[e.category].count++;
+  });
+
+  const sortedCategories = Object.entries(categorySummary).sort(
+    ([, a], [, b]) => b.total - a.total
+  );
+
+  let text = `📅 *${period}'s Expenses*\n\n`;
+  text += `💲 **Total:** ₹${total.toFixed(2)}\n`;
+  text += `📊 **Count:** ${expenseCount} expenses\n`;
+
+  if (isMonthly) {
+    const dailyAvg = total / currentDay;
+    const projectedTotal = dailyAvg * daysInMonth;
+    text += `📈 **Daily Avg:** ₹${dailyAvg.toFixed(2)}\n`;
+    text += `🔮 **Projected:** ₹${projectedTotal.toFixed(2)}\n`;
+  }
+
+  text += `\n**Top Categories:**\n`;
+  sortedCategories.forEach(([cat, data]) => {
+    const percentage = ((data.total / total) * 100).toFixed(0);
+    text += `\n${cat}: ₹${data.total.toFixed(2)} (${percentage}%)`;
+    text += `\n${data.count} expense${data.count === 1 ? "" : "s"}\n`;
+  });
+
+  return text;
 }
