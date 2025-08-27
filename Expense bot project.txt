@@ -51,8 +51,8 @@ Things done
 -/monthly command sent to bot to see the details of all expenses in that month
 
 Things to do 
--avoid duplicate user registration on /start
--add more categories and section(see llm usage here)
--add cron jobs to send daily expense at 11:59pm and monthly cron to send at last day of month at 11:59 (After that day's daily expense cron)
-
+-avoid duplicate user registration on /start -- DONE
+-add more categories and section(see llm usage here) -- DONE
+-add cron jobs to send daily expense at 11:59pm and monthly cron to send at last day of month at 11:59 (After that day's daily expense cron)   -- DONE
 -
+

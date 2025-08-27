@@ -1,5 +1,3 @@
-// FOR ZIP.zip/FOR ZIP/index.js
-
 import express from "express";
 import bodyParser from "body-parser";
 import TelegramBot from "node-telegram-bot-api";
@@ -38,6 +36,8 @@ app.use(bodyParser.json());
 const baseUrl =
   process.env.WEBHOOK_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`;
 const webhookUrl = `${baseUrl}/bot${token}`;
+
+app.use(express.static("public"));
 
 app.post(`/bot${token}`, (req, res) => {
   bot.processUpdate(req.body);
@@ -107,7 +107,6 @@ bot.on("message", async (msg) => {
   }
 });
 
-// ✅ Updated to use the new formatSummary
 bot.onText(/\/daily/, async (msg) => {
   const chatId = msg.chat.id;
   try {
@@ -120,7 +119,6 @@ bot.onText(/\/daily/, async (msg) => {
   }
 });
 
-// ✅ Updated to use the new formatSummary with the isMonthly flag
 bot.onText(/\/monthly/, async (msg) => {
   const chatId = msg.chat.id;
   try {
