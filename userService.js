@@ -1,142 +1,9 @@
-// // userService.js
-// import { createClient } from "@supabase/supabase-js";
-// import dotenv from "dotenv";
-
-// dotenv.config();
-
-// const supabase = createClient(
-//   process.env.SUPABASE_URL,
-//   process.env.SUPABASE_KEY
-// );
-
-// // Register a new user
-// export async function registerUser(chatId, username) {
-//   try {
-//     const { data: existingUser, error: fetchError } = await supabase
-//       .from("users")
-//       .select("id")
-//       .eq("telegram_id", chatId)
-//       .maybeSingle();
-
-//     if (fetchError) throw fetchError;
-
-//     if (existingUser) {
-//       return existingUser.id; // already registered
-//     }
-
-//     const { data, error } = await supabase
-//       .from("users")
-//       .insert([{ telegram_id: chatId, username }])
-//       .select("id")
-//       .single();
-
-//     if (error) throw error;
-
-//     return data.id;
-//   } catch (err) {
-//     console.error("registerUser error:", err.message);
-//     throw err;
-//   }
-// }
-
-// // Add an expense
-// export async function addExpense(chatId, amount, category) {
-//   try {
-//     // get user
-//     const { data: user, error: userError } = await supabase
-//       .from("users")
-//       .select("id")
-//       .eq("telegram_id", chatId)
-//       .single();
-
-//     if (userError) throw userError;
-
-//     // insert expense
-//     const { error } = await supabase.from("expenses").insert([
-//       {
-//         user_id: user.id,
-//         amount,
-//         category,
-//         main_category: category, // we can refine later
-//       },
-//     ]);
-
-//     if (error) throw error;
-//     return true;
-//   } catch (err) {
-//     console.error("addExpense error:", err.message);
-//     throw err;
-//   }
-// }
-
-// // Get today’s expenses
-// export async function getTodayExpenses(chatId) {
-//   try {
-//     const { data: user, error: userError } = await supabase
-//       .from("users")
-//       .select("id")
-//       .eq("telegram_id", chatId)
-//       .single();
-
-//     if (userError) throw userError;
-
-//     const { data, error } = await supabase
-//       .from("expenses")
-//       .select("amount, category, created_at")
-//       .eq("user_id", user.id)
-//       .gte("created_at", new Date().toISOString().slice(0, 10)) // today
-//       .order("created_at", { ascending: false });
-
-//     if (error) throw error;
-
-//     return data;
-//   } catch (err) {
-//     console.error("getTodayExpenses error:", err.message);
-//     throw err;
-//   }
-// }
-
-// // Get monthly expenses
-// export async function getMonthlyExpenses(chatId) {
-//   try {
-//     const { data: user, error: userError } = await supabase
-//       .from("users")
-//       .select("id")
-//       .eq("telegram_id", chatId)
-//       .single();
-
-//     if (userError) throw userError;
-
-//     const firstDayOfMonth = new Date();
-//     firstDayOfMonth.setDate(1);
-
-//     const { data, error } = await supabase
-//       .from("expenses")
-//       .select("amount, category, created_at")
-//       .eq("user_id", user.id)
-//       .gte("created_at", firstDayOfMonth.toISOString())
-//       .order("created_at", { ascending: false });
-
-//     if (error) throw error;
-
-//     return data;
-//   } catch (err) {
-//     console.error("getMonthlyExpenses error:", err.message);
-//     throw err;
-//   }
-// }
-
-// FOR ZIP.zip/FOR ZIP/userService.js
-
-// import supabase from "./supabaseClient.js";
 import { supabase } from "./supabaseClient.js";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-/**
- * Registers a new user in the database.
- * @param {number} telegramId The user's Telegram chat ID.
- * @param {string} username The user's Telegram username.
- * @returns {Promise<object>} The inserted user data.
- */
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+
 export async function registerUser(telegramId, username) {
   try {
     const { data: existingUser, error: fetchError } = await supabase
@@ -146,7 +13,7 @@ export async function registerUser(telegramId, username) {
       .maybeSingle();
 
     if (fetchError) throw fetchError;
-    if (existingUser) return existingUser.id; // User already registered
+    if (existingUser) return existingUser.id;
 
     const { data, error: insertError } = await supabase
       .from("users")
@@ -162,11 +29,6 @@ export async function registerUser(telegramId, username) {
   }
 }
 
-/**
- * Checks if a user is registered.
- * @param {number} telegramId The user's Telegram chat ID.
- * @returns {Promise<boolean>} True if the user is registered, false otherwise.
- */
 export async function isUserRegistered(telegramId) {
   try {
     const { data, error } = await supabase
@@ -175,7 +37,7 @@ export async function isUserRegistered(telegramId) {
       .eq("telegram_id", telegramId)
       .maybeSingle();
 
-    if (error && error.code !== "PGRST116") throw error; // 'PGRST116' means no rows found
+    if (error && error.code !== "PGRST116") throw error;
 
     return !!data;
   } catch (err) {
@@ -184,14 +46,50 @@ export async function isUserRegistered(telegramId) {
   }
 }
 
-/**
- * Adds a new expense for a user.
- * @param {number} telegramId The user's Telegram chat ID.
- * @param {number} amount The expense amount.
- * @param {string} category The expense category.
- * @returns {Promise<object>} The added expense data.
- */
-export async function addExpense(telegramId, amount, category) {
+async function getOrInferCategory(item) {
+  const lowerCaseItem = item.toLowerCase(); // ✅ Convert to lowercase
+
+  const { data, error } = await supabase
+    .from("categories")
+    .select("category")
+    .eq("item", lowerCaseItem) // ✅ Use lowercase for the query
+    .maybeSingle();
+
+  if (error && error.code !== "PGRST116") {
+    console.error("Supabase category fetch error:", error.message);
+  }
+
+  if (data) {
+    console.log(
+      `✅ Found category for '${lowerCaseItem}' in DB: ${data.category}`
+    );
+    return data.category;
+  }
+
+  console.log(`🧠 Inferring category for '${lowerCaseItem}' using LLM...`);
+  try {
+    const prompt = `What is the category for '${lowerCaseItem}'? Respond with only a single word for the category (e.g., 'Food', 'Transport', 'Utilities'). If you are unsure, use 'Miscellaneous'.`;
+    const result = await model.generateContent(prompt);
+    const inferredCategory = result.response.text().trim();
+    console.log(`✅ LLM inferred category: ${inferredCategory}`);
+
+    const { data: newCategory, error: insertError } = await supabase
+      .from("categories")
+      .insert([{ item: lowerCaseItem, category: inferredCategory }]) // ✅ Use lowercase for insertion
+      .select();
+
+    if (insertError) {
+      console.error("Supabase insert category error:", insertError.message);
+    }
+
+    return inferredCategory;
+  } catch (llmError) {
+    console.error("❌ LLM API call failed:", llmError.message);
+    return "Miscellaneous";
+  }
+}
+
+export async function addExpense(telegramId, amount, item) {
   try {
     const { data: user, error: userError } = await supabase
       .from("users")
@@ -200,6 +98,8 @@ export async function addExpense(telegramId, amount, category) {
       .single();
 
     if (userError || !user) throw new Error("User not found");
+
+    const category = await getOrInferCategory(item);
 
     const { data, error: insertError } = await supabase
       .from("expenses")
@@ -214,11 +114,6 @@ export async function addExpense(telegramId, amount, category) {
   }
 }
 
-/**
- * Fetches a user's expenses for the current day.
- * @param {number} telegramId The user's Telegram chat ID.
- * @returns {Promise<Array<object>>} A list of expenses.
- */
 export async function getTodayExpenses(telegramId) {
   try {
     const { data: user, error: userError } = await supabase
@@ -250,11 +145,6 @@ export async function getTodayExpenses(telegramId) {
   }
 }
 
-/**
- * Fetches a user's expenses for the current month.
- * @param {number} telegramId The user's Telegram chat ID.
- * @returns {Promise<Array<object>>} A list of expenses.
- */
 export async function getMonthlyExpenses(telegramId) {
   try {
     const { data: user, error: userError } = await supabase
