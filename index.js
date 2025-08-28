@@ -263,7 +263,7 @@ bot.onText(/\/start/, async (msg) => {
     await registerUser(chatId, username);
     bot.sendMessage(
       chatId,
-      `👋 Hi ${username}!\n\n✅ You are registered.\n\nSend expenses like:\n200 coffee`
+      `👋 Hi ${username}!\n\n✅ You are registered.\n\nSend expenses like:\n200 coffee \n Send /daily for daily expense \n Send /monthly for monthly expenses`
     );
   } catch (err) {
     console.error("❌ Registration error:", err);
