@@ -222,7 +222,7 @@ export function formatSummary(expenses, period, isMonthly = false) {
     ([, a], [, b]) => b.total - a.total
   );
 
-  let text = `📅 *${period}'s Expenses*\n\n`;
+  let text = `📅 *${period} Expenses*\n\n`;
   text += `💲 **Total:** ₹${total.toFixed(2)}\n`;
   text += `📊 **Count:** ${expenseCount} expenses\n`;
 
