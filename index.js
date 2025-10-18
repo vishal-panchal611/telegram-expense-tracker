@@ -374,35 +374,81 @@ cron.schedule("*/10 * * * *", async () => {
   }
 });
 
+//code added from chatGPT to solve the issue
 app.listen(port, async () => {
   console.log(`🚀 Server running on port ${port}`);
-  try {
-    await bot.setWebHook(webhookUrl);
-    console.log(`🌍 Webhook set at: ${webhookUrl}`);
 
-    cron.schedule("59 23 * * *", runDailySummary, {
-      timezone: "Asia/Kolkata",
-    });
+  // Delay webhook setup for a few seconds to let Render become reachable
+  setTimeout(async () => {
+    try {
+      const currentWebhook = `${baseUrl}/bot${token}`;
+      console.log(`🌍 Attempting to set webhook: ${currentWebhook}`);
 
-    cron.schedule(
-      "59 23 * * *",
-      async () => {
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
+      // First, delete any existing Telegram webhook (avoids EFATAL conflict)
+      await axios.get(`https://api.telegram.org/bot${token}/deleteWebhook`);
+      console.log("🧹 Old webhook cleared successfully.");
 
-        // If tomorrow's date = 1, today is the last day of the month
-        if (tomorrow.getDate() === 1) {
-          await runMonthlySummary();
-        }
-      },
-      {
+      // Then set the new webhook
+      await bot.setWebHook(currentWebhook);
+      console.log(`✅ Webhook set successfully at: ${currentWebhook}`);
+
+      // Schedule cron jobs
+      cron.schedule("59 23 * * *", runDailySummary, {
         timezone: "Asia/Kolkata",
-      }
-    );
+      });
 
-    console.log("🗓️ Cron jobs scheduled successfully.");
-  } catch (err) {
-    console.error("❌ Failed to set webhook or schedule jobs:", err);
-  }
+      cron.schedule(
+        "59 23 * * *",
+        async () => {
+          const today = new Date();
+          const tomorrow = new Date(today);
+          tomorrow.setDate(today.getDate() + 1);
+          if (tomorrow.getDate() === 1) {
+            await runMonthlySummary();
+          }
+        },
+        {
+          timezone: "Asia/Kolkata",
+        }
+      );
+
+      console.log("🗓️ Cron jobs scheduled successfully.");
+    } catch (err) {
+      console.error("❌ Failed to set webhook or schedule jobs:", err.message);
+    }
+  }); // wait 8 seconds for Render to become externally reachable
 });
+
+// code available before is as below
+// app.listen(port, async () => {
+//   console.log(`🚀 Server running on port ${port}`);
+//   try {
+//     await bot.setWebHook(webhookUrl);
+//     console.log(`🌍 Webhook set at: ${webhookUrl}`);
+
+//     cron.schedule("59 23 * * *", runDailySummary, {
+//       timezone: "Asia/Kolkata",
+//     });
+
+//     cron.schedule(
+//       "59 23 * * *",
+//       async () => {
+//         const today = new Date();
+//         const tomorrow = new Date(today);
+//         tomorrow.setDate(today.getDate() + 1);
+
+//         // If tomorrow's date = 1, today is the last day of the month
+//         if (tomorrow.getDate() === 1) {
+//           await runMonthlySummary();
+//         }
+//       },
+//       {
+//         timezone: "Asia/Kolkata",
+//       }
+//     );
+
+//     console.log("🗓️ Cron jobs scheduled successfully.");
+//   } catch (err) {
+//     console.error("❌ Failed to set webhook or schedule jobs:", err);
+//   }
+// });
