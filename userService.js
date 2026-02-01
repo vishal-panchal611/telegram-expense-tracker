@@ -4,7 +4,8 @@ import { supabase } from "./supabaseClient.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+//changed the model from gemini-2.0-flash to gemini-2.5-flash on 1st Feb 2026
 
 export async function registerUser(telegramId, username) {
   try {
@@ -63,7 +64,7 @@ async function getOrInferCategory(item) {
 
   if (data) {
     console.log(
-      `✅ Found category for '${lowerCaseItem}' in DB: ${data.category}`
+      `✅ Found category for '${lowerCaseItem}' in DB: ${data.category}`,
     );
     return data.category;
   }
@@ -164,7 +165,7 @@ export async function getMonthlyExpenses(telegramId) {
     const lastDayOfMonth = new Date(
       firstDayOfMonth.getFullYear(),
       firstDayOfMonth.getMonth() + 1,
-      0
+      0,
     );
     lastDayOfMonth.setHours(23, 59, 59, 999);
 
@@ -204,7 +205,7 @@ export function formatSummary(expenses, period, isMonthly = false) {
   const daysInMonth = new Date(
     now.getFullYear(),
     now.getMonth() + 1,
-    0
+    0,
   ).getDate();
 
   expenses.forEach((e) => {
@@ -219,7 +220,7 @@ export function formatSummary(expenses, period, isMonthly = false) {
   });
 
   const sortedCategories = Object.entries(categorySummary).sort(
-    ([, a], [, b]) => b.total - a.total
+    ([, a], [, b]) => b.total - a.total,
   );
 
   let text = `📅 *${period} Expenses*\n\n`;
